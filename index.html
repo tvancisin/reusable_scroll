@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title>PeaceRep</title>
+  <link rel="icon" href="data:;base64,iVBORwOKGO=" />
+  <link rel="stylesheet" href="css/style.css" />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Montserrat">
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"
+    integrity="sha256-/xUj+3OJU5yExlq6GSYGSHk7tPXikynS7ogEvDej/m4=" crossorigin="anonymous"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.8.0/leaflet.css" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.8.0/leaflet.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet-ajax/2.1.0/leaflet.ajax.min.js" crossorigin="anonymous"
+    referrerpolicy="no-referrer"></script>
+  <script src='https://api.mapbox.com/mapbox-gl-js/v3.1.2/mapbox-gl.js'></script>
+  <link href='https://api.mapbox.com/mapbox-gl-js/v3.1.2/mapbox-gl.css' rel='stylesheet' />
+  <link rel="icon" type="image/png" href="img/peace.png">
+</head>
+
+<body>
+
+  <div id="header">
+    <h1 id="title_header"></h1>
+
+    <img id="peace_img" src="img/logo.png" alt="PeaceRep Logo" />
+  </div>
+
+  <div id="story">
+    <div id="actor_dropdown">
+      <h4 style="margin: 5px;">Peace Actor</h4>
+      <select id="dropdown_country">
+        <option selected="selected">Russia</option>
+        <option>United Kingdom</option>
+        <option>United Nations</option>
+      </select>
+    </div>
+
+    <div id="separator" class="overview">
+      <div id="ch1_div">
+        <h1 id="num_pp"></h1> Peace Processes
+      </div>
+      <div id="ch1_div">
+        <h1 id="num_agt"></h1> Agreements
+      </div>
+      <div id="ch1_div">
+        <h1 id="num_act"></h1> Co-Signatories 
+      </div>
+      <div id="ch1_div">
+        <h1 id="yr_active"></h1> Activity Range
+      </div>
+    </div>
+
+    <div class="graphic">
+      <div class="graphic__vis">
+        <div id="hover_description"></div>
+        <svg id="visualization"></svg>
+      </div>
+      <div class="graphic__prose">
+        <p class="trigger one" data-step="0" style="height: 600px;"></p>
+        <p class="trigger two" data-step="1" style="height: 600px;"></p>
+        <p class="trigger three" data-step="2" style="height: 600px;"></p>
+        <p class="trigger four" data-step="3" style="height: 200px;"></p>
+        <!-- <p class="trigger five" data-step="4" style="height: 600px;">Step 3 concludes our brief tour. The graphic should
+          now go back to its original in-flow position, elegantly snapping back into place.</p> -->
+        <!-- <p class="trigger" data-step="5" style="height: 367.5px;">Step 2 arrives. The graphic should be locking into a
+          fixed position right about now. We could have a whole bunch of these “fixed” steps.</p> -->
+        <!-- <p class="trigger" data-step="6" style="height: 367.5px;">Step 3 concludes our brief tour. The graphic should
+          now go back to its original in-flow position, elegantly snapping back into place.</p> -->
+      </div>
+    </div>
+
+    <div class="graphic1">
+      <div class="graphic__vis__1">
+        <div id="map"></div>
+      </div>
+      <div class="graphic__prose__1">
+        <p class="trigger" data-step="0" style="height: 600px;">The geographic spread of Russian
+          engagement as a third-party signatory of peace agreements reflects its permanent seat on
+          the United Nations Security Council and its role as a regional power. Like other members
+          of the Permanent Five, Russia participates in large international conferences and in UN
+          Security Council resolutions that function as peace agreements. </p>
+        <p class="trigger" data-step="2" style="height: 600px;">However, most of its focus
+          – and where its activity has been over the last decade – relates to conflicts in its
+          neighbourhood and a number of select locales, where Russia is acting both as a military
+          partner and a peacemaker. </p>
+      </div>
+    </div>
+    <div id="break"></div>
+
+    <div id="separator1">
+      <div style="position: absolute; top: 80px; width: 100%; text-align: center;">
+        <h3>Read our research on Russia and its approaches to conflict, peace processes and mediation:</h3>
+      </div>
+      <div id="vik">
+        <a href="https://peacerep.org/publication/third-parties-peace-agreements-data-trends/" target="_blank"><img id="mage" src="img/mateja1.PNG" /></a>
+      </div>
+      <div id="vik">
+        <a href="https://peacerep.org/publication/non-western-approaches-to-peacemaking-and-peacebuilding-state-of-the-art-and-an-agenda-for-research/" target="_blank"><img id="mage" src="img/mateja2.PNG" /></a>
+      </div>
+      <div id="vik">
+        <a href="https://www.taylorfrancis.com/chapters/edit/10.4324/9781003372011-6/competition-norms-kasia-houghton?context=ubx&refId=214196cc-d7dc-4753-b173-9aa154a0d415" target="_blank"><img id="mage" src="img/mateja3.PNG" /></a>
+      </div>
+      <div id="vik">
+        <a href="https://peacerep.org/publication/russias-engagement-mariani-2022/" target="_blank"><img id="mage" src="img/mateja4.PNG" /></a>
+      </div>
+    </div>
+
+  </div>
+  <script src="js/countries.js"></script>
+  <script src="js/d3.v6.min.js"></script>
+  <script src="js/noframework.waypoints.min.js"></script>
+  <script src="js/main.js"></script>
+  <script src="js/scrollerVis.js"></script>
+</body>
+
+</html>
