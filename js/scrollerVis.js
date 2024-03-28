@@ -1,12 +1,5 @@
 let hovno = 0;
 
-//context dates
-const context_data = [{ year: "1991/07/10", text: "Boris Yeltsin" }, { year: "2000/05/07", text: "Vladimir Putin" },
-{ year: "2008/05/07", text: "Dmitry Medvedev" }, { year: "2012/05/07", text: "Vladimir Putin" }]
-let context_parser = d3.timeParse("%Y/%m/%d");
-context_data.forEach(function (d) {
-  d.year = context_parser(d.year)
-})
 // soviet countries
 const soviet = ["Armenia", "Azerbaijan", "Belarus", "Estonia", "Georgia",
   "Kazakhstan", "Kyrgyzstan", "Latvia", "Lithuania", "Moldova", "Russia",
@@ -15,7 +8,8 @@ const soviet = ["Armenia", "Azerbaijan", "Belarus", "Estonia", "Georgia",
 const syria = ["Syria", "Libya", "Central African Republic"];
 
 class ScrollerVis {
-  constructor(_config, _raw, _year, _array) {
+  constructor(_config, _raw, _year, _array, _context,
+    _selected_cntry, most_agt, _type, _stage) {
     this.config = {
       another: _config.storyElement,
       map: _config.mapElement,
@@ -26,9 +20,14 @@ class ScrollerVis {
         'step7', 'step8', 'step9', 'step10', 'step11', 'step12',
         'step13']
     }
+    this.most_agree_year = most_agt
+    this.selected_country = _selected_cntry;
     this.raw_data = _raw;
     this.year_division = _year;
     this.country_array = _array;
+    this.context_data = _context;
+    this.type = _type;
+    this.stage = _stage;
     this.initVis();
   }
 
@@ -43,10 +42,15 @@ class ScrollerVis {
       .attr("transform", `translate(10, ` + vis.height + `)`)
       .attr("class", "myXaxis")
 
+    vis.the_year = ".y" + this.most_agree_year.toString()
+
     //scale for vertical bees
     y_vertical.domain(d3.extent(vis.year_division, (d) => d[1][0][0]))
 
     window.scrollTo({ left: 0, top: 0, behavior: "auto" });
+
+    //remove special characters
+    this.stage = this.stage.replace(/[\s~`!@#$%^&*(){}\[\];:"'<,.>?\/\\|_+=-]/g, '')
 
     setTimeout(function () {
       hovno = 1;
@@ -57,12 +61,10 @@ class ScrollerVis {
     const vis = this;
     console.log("step1", direction);
     map.setFilter('state-fills', ['in', 'ADMIN', ...vis.country_array]);
-    console.log(vis.country_array);
+
     if (direction === "down") {
       //adjust domain
-      x_horizontal
-        .domain(d3.extent(vis.year_division, (d) => d[1][0][0]))
-        .nice();
+      x_horizontal.domain(d3.extent(vis.year_division, (d) => d[1][0][0])).nice();
       //initial simulation
       let simulation = d3.forceSimulation(vis.year_division)
         .force("x", d3.forceX((d) => x_horizontal(d[1][0][0])).strength(3))
@@ -94,27 +96,14 @@ class ScrollerVis {
           d3.select("#hover_description")
             .style("display", "none")
         })
-        .transition().delay(function (d, i) { return i * 4 })
+        .transition().delay(function (d, i) { return i })
         .attr('cx', d => d.x)
         .attr('cy', d => d.y)
         .attr("class", function (d) {
-          let first_word
-          if (soviet.includes(d[1][0][1][0].where_agt)) {
-            first_word = "my_circles " + "soviet "
-              + d[1][0][1][0].AgtId + " " + "y" +
-              d[1][0][1][0].date.getUTCFullYear()
-          }
-          else if (syria.includes(d[1][0][1][0].where_agt)) {
-            first_word = "my_circles " + "syria "
-              + d[1][0][1][0].AgtId + " " + "y" +
-              d[1][0][1][0].date.getUTCFullYear()
-          }
-          else {
-            first_word = "my_circles " +
-              " " + d[1][0][1][0].AgtId + " " + "y" +
-              d[1][0][1][0].date.getUTCFullYear()
-          }
-          return first_word;
+          return "my_circles " + d[1][0][1][0].agt_type + ` ` +
+            + d[1][0][1][0].AgtId + " "
+            + d[1][0][1][0].stage_label.replace(/[\s~`!@#$%^&*(){}\[\];:"'<,.>?\/\\|_+=-]/g, '')
+            + " y" + d[1][0][1][0].date.getUTCFullYear()
         })
         .attr('r', 10)
         .style('fill', "#7B8AD6")
@@ -136,19 +125,16 @@ class ScrollerVis {
       d3.selectAll(".myXaxis, .tick line").transition()
         .attr("visibility", "visible")
 
+
     }
     else if (direction == "up") {
-      d3.selectAll(".soviet")
-        .transition()
-        .style("fill", "#7B8AD6")
-
 
       horizontal_svg.selectAll('.my_circles')
         .data(vis.year_division)
         .join('circle')
         .attr('cx', d => d.x)
         .attr('cy', d => d.y)
-        .transition().delay(function (d, i) { return i * 3 })
+        .transition().delay(function (d, i) { return i })
         .attr('cx', -50)
         .attr('cy', vis.height / 2)
       d3.selectAll(".myXaxis, .tick line").transition()
@@ -159,25 +145,38 @@ class ScrollerVis {
   step2(direction) {
     const vis = this;
     console.log("step2", direction);
-    d3.selectAll(".soviet").transition().style("fill", "white")
-    d3.selectAll(".syria").transition().style("fill", "#7B8AD6")
+    if (direction == "down") {
+      d3.selectAll(vis.the_year).style("fill", "white")
+    }
+    else {
+      d3.selectAll("." + this.type).style("fill", "#7B8AD6")
+      d3.selectAll(vis.the_year).style("fill", "#7B8AD6")
+
+    }
   }
 
   step3(direction) {
     const vis = this;
     console.log("step3", direction);
-    d3.selectAll(".syria").transition().duration(500).style("fill", "white")
 
     if (direction === "down") {
-      d3.selectAll(".soviet").transition().duration(500).style("fill", "#7B8AD6")
+      d3.selectAll(vis.the_year).style("fill", "#7B8AD6")
       vis.line.selectAll(".context_line")
-        .data(context_data)
+        .data(this.context_data)
         .join(
           enter => enter.append("line")
             .attr("class", "context_line")
             .attr("x1", function (d) { return x_horizontal(d.year) })
             .attr("x2", function (d) { return x_horizontal(d.year) })
-            .attr("y1", function (d, i) { return vis.height * 0.2 - i * 30 })
+            .attr("y1", function (d, i) {
+              i += 1;
+              if (i % 2 !== 0) {
+                return vis.height * 0.2 - 30
+              }
+              else {
+                return vis.height * 0.2
+              }
+            })
             .attr("y2", vis.height)
             .attr("stroke-width", 1)
             .attr("stroke", "white")
@@ -191,7 +190,7 @@ class ScrollerVis {
             .transition().duration(500)
             .attr("x1", function (d) { return x_horizontal(d.year) })
             .attr("x2", function (d) { return x_horizontal(d.year) })
-            .attr("y1", function (d, i) { return vis.height * 0.2 - i * 30 })
+            .attr("y1", function (d, i) { return vis.height * 0.3 - i * 30 })
             .attr("y2", vis.height)
             .selection(),
           exit => exit
@@ -200,16 +199,24 @@ class ScrollerVis {
             .remove()
         )
       vis.line.selectAll(".context_text")
-        .data(context_data)
+        .data(this.context_data)
         .join(
           enter => enter.append("text")
             .attr("class", "context_text")
             .attr('text-anchor', 'start')
             .attr("fill", "white")
             .attr("fill-opacity", 1)
-            .attr("font-size", "20px")
+            .attr("font-size", "16px")
             .attr("x", function (d) { return x_horizontal(d.year) + 2 })
-            .attr("y", function (d, i) { return vis.height * 0.2 - i * 30 })
+            .attr("y", function (d, i) {
+              i += 1;
+              if (i % 2 !== 0) {
+                return vis.height * 0.2 - 30
+              }
+              else {
+                return vis.height * 0.2
+              }
+            })
             .text(function (d) { return d.text })
             .attr("opacity", 0)
             .transition().duration(500)
@@ -218,7 +225,7 @@ class ScrollerVis {
           update => update
             .transition().duration(500)
             .attr("x", function (d) { return x_horizontal(d.year) + 2 })
-            .attr("y", function (d, i) { return vis.height * 0.2 - i * 30 })
+            .attr("y", function (d, i) { return vis.height * 0.3 - i * 30 })
             .text(function (d) { return d.text })
             .selection(),
           exit => exit
@@ -226,8 +233,11 @@ class ScrollerVis {
             .attr("opacity", 0)
             .remove()
         )
+      d3.selectAll("." + this.type).style("fill", "white")
     }
     else {
+      d3.selectAll("." + this.type).style("fill", "#7B8AD6")
+      d3.selectAll(vis.the_year).style("fill", "white")
       vis.line.selectAll(".context_line")
         .data([])
         .join(
@@ -235,7 +245,15 @@ class ScrollerVis {
             .attr("class", "context_line")
             .attr("x1", function (d) { return x_horizontal(d.year) })
             .attr("x2", function (d) { return x_horizontal(d.year) })
-            .attr("y1", function (d, i) { return vis.height * 0.2 - i * 30 })
+            .attr("y1", function (d, i) {
+              i += 1;
+              if (i % 2 !== 0) {
+                return vis.height * 0.2 - 30
+              }
+              else {
+                return vis.height * 0.2
+              }
+            })
             .attr("y2", vis.height / 2)
             .attr("stroke-width", 1)
             .attr("stroke", "white")
@@ -248,7 +266,7 @@ class ScrollerVis {
             .transition().duration(500)
             .attr("x1", function (d) { return x_horizontal(d.year) })
             .attr("x2", function (d) { return x_horizontal(d.year) })
-            .attr("y1", function (d, i) { return vis.height * 0.2 - i * 30 })
+            .attr("y1", function (d, i) { return vis.height * 0.3 - i * 30 })
             .attr("y2", vis.height / 2)
             .selection(),
           exit => exit
@@ -264,9 +282,17 @@ class ScrollerVis {
             .attr("class", "context_text")
             .attr('text-anchor', 'start')
             .attr("fill", "white")
-            .attr("font-size", "20px")
+            .attr("font-size", "16px")
             .attr("x", function (d) { return x_horizontal(d.year) + 2 })
-            .attr("y", function (d, i) { return vis.height * 0.2 - i * 30 })
+            .attr("y", function (d, i) {
+              i += 1;
+              if (i % 2 !== 0) {
+                return vis.height * 0.2 - 30
+              }
+              else {
+                return vis.height * 0.2
+              }
+            })
             .text(function (d) { return d.text })
             .attr("opacity", 0)
             .transition().duration(500)
@@ -275,7 +301,7 @@ class ScrollerVis {
           update => update
             .transition().duration(500)
             .attr("x", function (d) { return x_horizontal(d.year) + 2 })
-            .attr("y", function (d, i) { return vis.height * 0.2 - i * 30 })
+            .attr("y", function (d, i) { return vis.height * 0.3 - i * 30 })
             .text(function (d) { return d.text })
             .selection(),
           exit => exit
@@ -289,9 +315,24 @@ class ScrollerVis {
   step4(direction) {
     const vis = this;
     console.log("step4", direction);
-        console.log(vis.year_division);
+    if (direction == "down") {
+      console.log(this.stage);
+      d3.selectAll("." + this.type).style("fill", "#7B8AD6")
+      d3.selectAll("." + this.stage).style("fill", "white")
+
+    }
+    else {
+      d3.selectAll("." + this.stage).style("fill", "#7B8AD6")
+      d3.selectAll("." + this.type).style("fill", "white")
+
+    }
+
+  }
+  step5(direction) {
+    const vis = this;
+    console.log("step5", direction);
     if (direction === "down") {
-      d3.selectAll(".syria").transition().style("fill", "#7B8AD6")
+      d3.selectAll(".my_circles").style("fill", "#7B8AD6")
       x_horizontal.domain(d3.extent(vis.year_division, function (d) { return d[1][0][0]; }))
         .nice();
       //initial simulation
@@ -309,7 +350,7 @@ class ScrollerVis {
       horizontal_svg.selectAll('.my_circles')
         .data(vis.year_division)
         .join('circle')
-        .transition().delay(function (d, i) { return i * 3 })
+        .transition().delay(function (d, i) { return i })
         .attr('cx', d => d.x)
         .attr('cy', d => d.y)
         .attr('r', 4)
@@ -321,7 +362,15 @@ class ScrollerVis {
             .attr("class", "context_line")
             .attr("x1", function (d) { return x_horizontal(d.year) })
             .attr("x2", function (d) { return x_horizontal(d.year) })
-            .attr("y1", function (d, i) { return vis.height * 0.2 - i * 30 })
+            .attr("y1", function (d, i) {
+              i += 1;
+              if (i % 2 !== 0) {
+                return vis.height * 0.2 - 30
+              }
+              else {
+                return vis.height * 0.2
+              }
+            })
             .attr("y2", vis.height - 10)
             .attr("stroke-width", 1)
             .attr("stroke", "white")
@@ -354,7 +403,15 @@ class ScrollerVis {
             .attr("fill-opacity", 1)
             .attr("font-size", "16px")
             .attr("x", function (d) { return x_horizontal(d.year) + 2 })
-            .attr("y", function (d, i) { return vis.height * 0.2 - i * 30 })
+            .attr("y", function (d, i) {
+              i += 1;
+              if (i % 2 !== 0) {
+                return vis.height * 0.2 - 30
+              }
+              else {
+                return vis.height * 0.2
+              }
+            })
             .text(function (d) { return d.text })
             .attr("opacity", 0)
             .transition().duration(1000)
@@ -391,6 +448,7 @@ class ScrollerVis {
         .style("font-family", "Montserrat");
     }
     else if (direction == "up") {
+      d3.selectAll("." + this.stage).style("fill", "white")
       d3.selectAll(".myXaxis, .tick line")
         .attr("visibility", "visible")
       vis.x_axis = d3.axisBottom(x_horizontal).tickSize(-vis.height).ticks(10);
@@ -427,19 +485,27 @@ class ScrollerVis {
       horizontal_svg.selectAll('.my_circles')
         .data(vis.year_division)
         .join('circle')
-        .transition().transition().delay(function (d, i) { return i * 5 })
+        .transition().transition().delay(function (d, i) { return i })
         .attr('cx', d => d.x)
         .attr('cy', d => d.y)
         .attr('r', 10)
 
       vis.line.selectAll(".context_line")
-        .data(context_data)
+        .data(this.context_data)
         .join(
           enter => enter.append("line")
             .attr("class", "context_line")
             .attr("x1", function (d) { return x_horizontal(d.year) })
             .attr("x2", function (d) { return x_horizontal(d.year) })
-            .attr("y1", function (d, i) { return vis.height * 0.2 - i * 30 })
+            .attr("y1", function (d, i) {
+              i += 1;
+              if (i % 2 !== 0) {
+                return vis.height * 0.2 - 30
+              }
+              else {
+                return vis.height * 0.2
+              }
+            })
             .attr("y2", vis.height)
             .attr("stroke-width", 1)
             .attr("stroke", "white")
@@ -463,16 +529,24 @@ class ScrollerVis {
         )
 
       vis.line.selectAll(".context_text")
-        .data(context_data)
+        .data(this.context_data)
         .join(
           enter => enter.append("text")
             .attr("class", "context_text")
             .attr('text-anchor', 'start')
             .attr("fill", "white")
             .attr("fill-opacity", 1)
-            .attr("font-size", "20px")
+            .attr("font-size", "16px")
             .attr("x", function (d) { return x_horizontal(d.year) + 2 })
-            .attr("y", function (d, i) { return vis.height * 0.2 - i * 30 })
+            .attr("y", function (d, i) {
+              i += 1;
+              if (i % 2 !== 0) {
+                return vis.height * 0.2 - 30
+              }
+              else {
+                return vis.height * 0.2
+              }
+            })
             .text(function (d) { return d.text })
             .attr("opacity", 0)
             .transition().duration(1000)
@@ -492,13 +566,39 @@ class ScrollerVis {
     }
 
   }
-  step5(direction) {
-  }
 
   step6(direction) {
+    const vis = this;
+    console.log("step6", direction);
   }
 
   step7(direction) {
+    const vis = this;
+    console.log("step7", direction);
+    if (direction == "down") {
+      if (this.selected_country == "ru") {
+        map.flyTo({
+          center: [41.4422, 42.9738],
+          zoom: 5.5,
+          essential: true // this animation is considered essential with respect to prefers-reduced-motion
+        });
+      }
+      else {
+        map.flyTo({
+          center: [-6.4923, 54.7877],
+          zoom: 5.5,
+          essential: true // this animation is considered essential with respect to prefers-reduced-motion
+        });
+      }
+    }
+    else {
+      map.flyTo({
+        center: [60.137343, 40.137451],
+        zoom: 2,
+        essential: true // this animation is considered essential with respect to prefers-reduced-motion
+      });
+
+    }
   }
 
   step8(direction) {

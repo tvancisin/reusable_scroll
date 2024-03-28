@@ -159,7 +159,7 @@ body::-webkit-scrollbar-thumb:hover {
 
 .tick line {
   stroke: white;
-  stroke-opacity: 0.3;
+  stroke-opacity: 0;
 }
 
 #para1 {
@@ -199,6 +199,7 @@ body::-webkit-scrollbar-thumb:hover {
 }
 
 #actor_dropdown {
+  z-index: 999;
   position: absolute;
   top: 5px;
   width: 200px;
