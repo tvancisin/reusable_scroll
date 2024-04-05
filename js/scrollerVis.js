@@ -1,11 +1,86 @@
 let hovno = 0;
+let context_parser = d3.timeParse("%Y/%m/%d");
 
-// soviet countries
-const soviet = ["Armenia", "Azerbaijan", "Belarus", "Estonia", "Georgia",
-  "Kazakhstan", "Kyrgyzstan", "Latvia", "Lithuania", "Moldova", "Russia",
-  "Tajikistan", "Turkmenistan", "Ukraine", "Uzbekistan"];
-// middle east countries
-const syria = ["Syria", "Libya", "Central African Republic"];
+// re-drawing context lines/text
+const drawContext = function (context, height) {
+
+  line.selectAll(".context_line")
+    .data(context)
+    .join(
+      enter => enter.append("line")
+        .attr("class", "context_line")
+        .attr("x1", function (d) {
+          return x_horizontal(context_parser(d.year))
+        })
+        .attr("x2", function (d) { return x_horizontal(context_parser(d.year)) })
+        .attr("y1", function (d, i) {
+          i += 1;
+          if (i % 2 !== 0) {
+            return height * 0.2 - 30
+          }
+          else {
+            return height * 0.2
+          }
+        })
+        .attr("y2", height)
+        .attr("stroke-width", 1)
+        .attr("stroke", "white")
+        .attr("stroke-opacity", 0.7)
+        .attr("stroke-dasharray", "8,8")
+        .attr("opacity", 0)
+        .transition().duration(500)
+        .attr("opacity", 1)
+        .selection(),
+      update => update
+        .transition().duration(500)
+        .attr("x1", function (d) { return x_horizontal(context_parser(d.year)) })
+        .attr("x2", function (d) { return x_horizontal(context_parser(d.year)) })
+        .attr("y1", function (d, i) { return height * 0.3 - i * 30 })
+        .attr("y2", height)
+        .selection(),
+      exit => exit
+        .transition().duration(500)
+        .attr("opacity", 0)
+        .remove()
+    )
+
+  line.selectAll(".context_text")
+    .data(context)
+    .join(
+      enter => enter.append("text")
+        .attr("class", "context_text")
+        .attr('text-anchor', 'start')
+        .attr("fill", "white")
+        .attr("fill-opacity", 1)
+        .attr("font-size", "16px")
+        .attr("x", function (d) { return x_horizontal(context_parser(d.year)) + 2 })
+        .attr("y", function (d, i) {
+          i += 1;
+          if (i % 2 !== 0) {
+            return height * 0.2 - 30
+          }
+          else {
+            return height * 0.2
+          }
+        })
+        .text(function (d) { return d.text })
+        .attr("opacity", 0)
+        .transition().duration(500)
+        .attr("opacity", 1)
+        .selection(),
+      update => update
+        .transition().duration(500)
+        .attr("x", function (d) { return x_horizontal(context_parser(d.year)) + 2 })
+        .attr("y", function (d, i) { return height * 0.3 - i * 30 })
+        .text(function (d) { return d.text })
+        .selection(),
+      exit => exit
+        .transition().duration(500)
+        .attr("opacity", 0)
+        .remove()
+    )
+
+}
 
 class ScrollerVis {
   constructor(_config, _raw, _year, _array, _context,
@@ -32,35 +107,34 @@ class ScrollerVis {
   }
 
   initVis() {
+    window.scrollTo({ left: 0, top: 0, behavior: "auto" });
+
     let vis = this;
     vis.width = vis.config.vis_width - vis.config.margin.left - vis.config.margin.right;
     vis.height = vis.config.vis_height - vis.config.margin.top - vis.config.margin.bottom;
-
-    vis.line = horizontal_svg.append("g")
+    // context lines/text
     vis.x_axis = d3.axisBottom(x_horizontal).tickSize(-vis.height).ticks(10);
     horizontal_svg.append("g")
       .attr("transform", `translate(10, ` + vis.height + `)`)
       .attr("class", "myXaxis")
-
-    vis.the_year = ".y" + this.most_agree_year.toString()
-
     //scale for vertical bees
     y_vertical.domain(d3.extent(vis.year_division, (d) => d[1][0][0]))
-
-    window.scrollTo({ left: 0, top: 0, behavior: "auto" });
-
-    //remove special characters
+    // most agreements year class name
+    vis.the_year = ".y" + this.most_agree_year.toString()
+    //remove special characters from stage names
     this.stage = this.stage.replace(/[\s~`!@#$%^&*(){}\[\];:"'<,.>?\/\\|_+=-]/g, '')
 
     setTimeout(function () {
       hovno = 1;
     }, 800);
+
   }
 
   step1(direction) {
     const vis = this;
     console.log("step1", direction);
     map.setFilter('state-fills', ['in', 'ADMIN', ...vis.country_array]);
+    d3.selectAll(".tick").remove()
 
     if (direction === "down") {
       //adjust domain
@@ -102,6 +176,7 @@ class ScrollerVis {
         .attr("class", function (d) {
           return "my_circles " + d[1][0][1][0].agt_type + ` ` +
             + d[1][0][1][0].AgtId + " "
+            + d[1][0][1][0].PPName.slice(0, 3) + " "
             + d[1][0][1][0].stage_label.replace(/[\s~`!@#$%^&*(){}\[\];:"'<,.>?\/\\|_+=-]/g, '')
             + " y" + d[1][0][1][0].date.getUTCFullYear()
         })
@@ -110,7 +185,7 @@ class ScrollerVis {
         .style("stroke", "black")
         .style("strokewidth", 0.5)
 
-      horizontal_svg.selectAll(".myXaxis").transition()
+      horizontal_svg.selectAll(".myXaxis")
         .call(vis.x_axis)
         .style("stroke-dasharray", "5 5")
         .selectAll("text")
@@ -124,11 +199,8 @@ class ScrollerVis {
         .attr("visibility", "hidden")
       d3.selectAll(".myXaxis, .tick line").transition()
         .attr("visibility", "visible")
-
-
     }
     else if (direction == "up") {
-
       horizontal_svg.selectAll('.my_circles')
         .data(vis.year_division)
         .join('circle')
@@ -140,6 +212,7 @@ class ScrollerVis {
       d3.selectAll(".myXaxis, .tick line").transition()
         .attr("visibility", "hidden")
     }
+
   }
 
   step2(direction) {
@@ -151,7 +224,6 @@ class ScrollerVis {
     else {
       d3.selectAll("." + this.type).style("fill", "#7B8AD6")
       d3.selectAll(vis.the_year).style("fill", "#7B8AD6")
-
     }
   }
 
@@ -161,160 +233,20 @@ class ScrollerVis {
 
     if (direction === "down") {
       d3.selectAll(vis.the_year).style("fill", "#7B8AD6")
-      vis.line.selectAll(".context_line")
-        .data(this.context_data)
-        .join(
-          enter => enter.append("line")
-            .attr("class", "context_line")
-            .attr("x1", function (d) { return x_horizontal(d.year) })
-            .attr("x2", function (d) { return x_horizontal(d.year) })
-            .attr("y1", function (d, i) {
-              i += 1;
-              if (i % 2 !== 0) {
-                return vis.height * 0.2 - 30
-              }
-              else {
-                return vis.height * 0.2
-              }
-            })
-            .attr("y2", vis.height)
-            .attr("stroke-width", 1)
-            .attr("stroke", "white")
-            .attr("stroke-opacity", 0.7)
-            .attr("stroke-dasharray", "8,8")
-            .attr("opacity", 0)
-            .transition().duration(500)
-            .attr("opacity", 1)
-            .selection(),
-          update => update
-            .transition().duration(500)
-            .attr("x1", function (d) { return x_horizontal(d.year) })
-            .attr("x2", function (d) { return x_horizontal(d.year) })
-            .attr("y1", function (d, i) { return vis.height * 0.3 - i * 30 })
-            .attr("y2", vis.height)
-            .selection(),
-          exit => exit
-            .transition().duration(500)
-            .attr("opacity", 0)
-            .remove()
-        )
-      vis.line.selectAll(".context_text")
-        .data(this.context_data)
-        .join(
-          enter => enter.append("text")
-            .attr("class", "context_text")
-            .attr('text-anchor', 'start')
-            .attr("fill", "white")
-            .attr("fill-opacity", 1)
-            .attr("font-size", "16px")
-            .attr("x", function (d) { return x_horizontal(d.year) + 2 })
-            .attr("y", function (d, i) {
-              i += 1;
-              if (i % 2 !== 0) {
-                return vis.height * 0.2 - 30
-              }
-              else {
-                return vis.height * 0.2
-              }
-            })
-            .text(function (d) { return d.text })
-            .attr("opacity", 0)
-            .transition().duration(500)
-            .attr("opacity", 1)
-            .selection(),
-          update => update
-            .transition().duration(500)
-            .attr("x", function (d) { return x_horizontal(d.year) + 2 })
-            .attr("y", function (d, i) { return vis.height * 0.3 - i * 30 })
-            .text(function (d) { return d.text })
-            .selection(),
-          exit => exit
-            .transition().duration(500)
-            .attr("opacity", 0)
-            .remove()
-        )
+      drawContext(this.context_data, vis.height)
       d3.selectAll("." + this.type).style("fill", "white")
     }
     else {
       d3.selectAll("." + this.type).style("fill", "#7B8AD6")
       d3.selectAll(vis.the_year).style("fill", "white")
-      vis.line.selectAll(".context_line")
-        .data([])
-        .join(
-          enter => enter.append("line")
-            .attr("class", "context_line")
-            .attr("x1", function (d) { return x_horizontal(d.year) })
-            .attr("x2", function (d) { return x_horizontal(d.year) })
-            .attr("y1", function (d, i) {
-              i += 1;
-              if (i % 2 !== 0) {
-                return vis.height * 0.2 - 30
-              }
-              else {
-                return vis.height * 0.2
-              }
-            })
-            .attr("y2", vis.height / 2)
-            .attr("stroke-width", 1)
-            .attr("stroke", "white")
-            .attr("stroke-dasharray", "8,8")
-            .attr("opacity", 0)
-            .transition().duration(500)
-            .attr("opacity", 1)
-            .selection(),
-          update => update
-            .transition().duration(500)
-            .attr("x1", function (d) { return x_horizontal(d.year) })
-            .attr("x2", function (d) { return x_horizontal(d.year) })
-            .attr("y1", function (d, i) { return vis.height * 0.3 - i * 30 })
-            .attr("y2", vis.height / 2)
-            .selection(),
-          exit => exit
-            .transition().duration(500)
-            .attr("opacity", 0)
-            .remove()
-        )
-
-      vis.line.selectAll(".context_text")
-        .data([])
-        .join(
-          enter => enter.append("text")
-            .attr("class", "context_text")
-            .attr('text-anchor', 'start')
-            .attr("fill", "white")
-            .attr("font-size", "16px")
-            .attr("x", function (d) { return x_horizontal(d.year) + 2 })
-            .attr("y", function (d, i) {
-              i += 1;
-              if (i % 2 !== 0) {
-                return vis.height * 0.2 - 30
-              }
-              else {
-                return vis.height * 0.2
-              }
-            })
-            .text(function (d) { return d.text })
-            .attr("opacity", 0)
-            .transition().duration(500)
-            .attr("opacity", 1)
-            .selection(),
-          update => update
-            .transition().duration(500)
-            .attr("x", function (d) { return x_horizontal(d.year) + 2 })
-            .attr("y", function (d, i) { return vis.height * 0.3 - i * 30 })
-            .text(function (d) { return d.text })
-            .selection(),
-          exit => exit
-            .transition().duration(500)
-            .attr("opacity", 0)
-            .remove()
-        )
+      drawContext([], vis.height)
     }
   }
 
   step4(direction) {
     const vis = this;
     console.log("step4", direction);
+
     if (direction == "down") {
       console.log(this.stage);
       d3.selectAll("." + this.type).style("fill", "#7B8AD6")
@@ -324,13 +256,13 @@ class ScrollerVis {
     else {
       d3.selectAll("." + this.stage).style("fill", "#7B8AD6")
       d3.selectAll("." + this.type).style("fill", "white")
-
     }
-
   }
+
   step5(direction) {
     const vis = this;
     console.log("step5", direction);
+
     if (direction === "down") {
       d3.selectAll(".my_circles").style("fill", "#7B8AD6")
       x_horizontal.domain(d3.extent(vis.year_division, function (d) { return d[1][0][0]; }))
@@ -355,79 +287,8 @@ class ScrollerVis {
         .attr('cy', d => d.y)
         .attr('r', 4)
 
-      vis.line.selectAll(".context_line")
-        .data([])
-        .join(
-          enter => enter.append("line")
-            .attr("class", "context_line")
-            .attr("x1", function (d) { return x_horizontal(d.year) })
-            .attr("x2", function (d) { return x_horizontal(d.year) })
-            .attr("y1", function (d, i) {
-              i += 1;
-              if (i % 2 !== 0) {
-                return vis.height * 0.2 - 30
-              }
-              else {
-                return vis.height * 0.2
-              }
-            })
-            .attr("y2", vis.height - 10)
-            .attr("stroke-width", 1)
-            .attr("stroke", "white")
-            .attr("stroke-opacity", 0.7)
-            .attr("stroke-dasharray", "8,8")
-            .attr("opacity", 0)
-            .transition().duration(1000)
-            .attr("opacity", 1)
-            .selection(),
-          update => update
-            .transition().duration(1000)
-            .attr("x1", function (d) { return x_horizontal(d.year) })
-            .attr("x2", function (d) { return x_horizontal(d.year) })
-            .attr("y1", function (d, i) { return vis.height * 0.2 - i * 30 })
-            .attr("y2", vis.height - 10)
-            .selection(),
-          exit => exit
-            .transition().duration(500)
-            .attr("opacity", 0)
-            .remove()
-        )
-
-      vis.line.selectAll(".context_text")
-        .data([])
-        .join(
-          enter => enter.append("text")
-            .attr("class", "context_text")
-            .attr('text-anchor', 'start')
-            .attr("fill", "white")
-            .attr("fill-opacity", 1)
-            .attr("font-size", "16px")
-            .attr("x", function (d) { return x_horizontal(d.year) + 2 })
-            .attr("y", function (d, i) {
-              i += 1;
-              if (i % 2 !== 0) {
-                return vis.height * 0.2 - 30
-              }
-              else {
-                return vis.height * 0.2
-              }
-            })
-            .text(function (d) { return d.text })
-            .attr("opacity", 0)
-            .transition().duration(1000)
-            .attr("opacity", 1)
-            .selection(),
-          update => update
-            .transition().duration(1000)
-            .attr("x", function (d) { return x_horizontal(d.year) + 2 })
-            .attr("y", function (d, i) { return vis.height * 0.2 - i * 30 })
-            .text(function (d) { return d.text })
-            .selection(),
-          exit => exit
-            .transition().duration(500)
-            .attr("opacity", 0)
-            .remove()
-        )
+      // update context lines/text
+      drawContext([], vis.height)
 
       d3.selectAll(".graphic__vis, #visualization").transition().delay(500)
         .style("width", 130 + "px")
@@ -490,86 +351,35 @@ class ScrollerVis {
         .attr('cy', d => d.y)
         .attr('r', 10)
 
-      vis.line.selectAll(".context_line")
-        .data(this.context_data)
-        .join(
-          enter => enter.append("line")
-            .attr("class", "context_line")
-            .attr("x1", function (d) { return x_horizontal(d.year) })
-            .attr("x2", function (d) { return x_horizontal(d.year) })
-            .attr("y1", function (d, i) {
-              i += 1;
-              if (i % 2 !== 0) {
-                return vis.height * 0.2 - 30
-              }
-              else {
-                return vis.height * 0.2
-              }
-            })
-            .attr("y2", vis.height)
-            .attr("stroke-width", 1)
-            .attr("stroke", "white")
-            .attr("stroke-opacity", 0.7)
-            .attr("stroke-dasharray", "8,8")
-            .attr("opacity", 0)
-            .transition().duration(1000)
-            .attr("opacity", 1)
-            .selection(),
-          update => update
-            .transition().duration(1000)
-            .attr("x1", function (d) { return x_horizontal(d.year) })
-            .attr("x2", function (d) { return x_horizontal(d.year) })
-            .attr("y1", function (d, i) { return vis.height * 0.2 - i * 30 })
-            .attr("y2", vis.height)
-            .selection(),
-          exit => exit
-            .transition().duration(500)
-            .attr("opacity", 0)
-            .remove()
-        )
-
-      vis.line.selectAll(".context_text")
-        .data(this.context_data)
-        .join(
-          enter => enter.append("text")
-            .attr("class", "context_text")
-            .attr('text-anchor', 'start')
-            .attr("fill", "white")
-            .attr("fill-opacity", 1)
-            .attr("font-size", "16px")
-            .attr("x", function (d) { return x_horizontal(d.year) + 2 })
-            .attr("y", function (d, i) {
-              i += 1;
-              if (i % 2 !== 0) {
-                return vis.height * 0.2 - 30
-              }
-              else {
-                return vis.height * 0.2
-              }
-            })
-            .text(function (d) { return d.text })
-            .attr("opacity", 0)
-            .transition().duration(1000)
-            .attr("opacity", 1)
-            .selection(),
-          update => update
-            .transition().duration(1000)
-            .attr("x", function (d) { return x_horizontal(d.year) + 2 })
-            .attr("y", function (d, i) { return vis.height * 0.2 - i * 30 })
-            .text(function (d) { return d.text })
-            .selection(),
-          exit => exit
-            .transition().duration(500)
-            .attr("opacity", 0)
-            .remove()
-        )
+      // update context lines/text
+      drawContext(this.context_data, vis.height)
     }
-
   }
 
   step6(direction) {
     const vis = this;
     console.log("step6", direction);
+
+    if (direction == "down") {
+      d3.select(".graphic__vis").style("background-color", "rgba(0, 0, 0, 0.5)")
+      if (this.selected_country == "ru") {
+        map.flyTo({
+          center: [60.137343, 60.137451],
+          zoom: 2,
+          essential: true // this animation is considered essential with respect to prefers-reduced-motion
+        });
+      }
+      else if (this.selected_country == "uk") {
+        map.flyTo({
+          center: [-6.4923, 54.7877],
+          zoom: 2,
+          essential: true // this animation is considered essential with respect to prefers-reduced-motion
+        });
+      }
+    }
+    else {
+      d3.select(".graphic__vis").style("background-color", "rgba(0, 0, 0, 0)")
+    }
   }
 
   step7(direction) {
@@ -577,6 +387,7 @@ class ScrollerVis {
     console.log("step7", direction);
     if (direction == "down") {
       if (this.selected_country == "ru") {
+        d3.selectAll(".Abk").style("fill", "white")
         map.flyTo({
           center: [41.4422, 42.9738],
           zoom: 5.5,
@@ -584,6 +395,7 @@ class ScrollerVis {
         });
       }
       else {
+        d3.selectAll(".Nor").style("fill", "white")
         map.flyTo({
           center: [-6.4923, 54.7877],
           zoom: 5.5,
@@ -592,8 +404,9 @@ class ScrollerVis {
       }
     }
     else {
+      d3.selectAll(".my_circles").style("fill", "#7B8AD6")
       map.flyTo({
-        center: [60.137343, 40.137451],
+        center: [20.137343, 30.137451],
         zoom: 2,
         essential: true // this animation is considered essential with respect to prefers-reduced-motion
       });
@@ -604,93 +417,11 @@ class ScrollerVis {
   step8(direction) {
     const vis = this;
     console.log("vancisin_1747_database");
-
-    if (direction === "up") {
-
-      d3.selectAll("#trans")
-        .transition()
-        .style("bottom", "67px")
-
-    }
-    else {
-      d3.select(".fix")
-        .transition(1000)
-        .attr("transform", "translate(" + vis.config.margin.left + "," + (vis.config.height - 50) + ")")
-    }
   }
 
   step9(direction) {
     const vis = this;
     console.log("vancisin_1747_visualization");
-
-    if (direction === "up") {
-
-
-      d3.selectAll("#trans")
-        .transition()
-        .style("bottom", "82px")
-
-      d3.selectAll("#expan")
-        .transition()
-        .style("bottom", "65px")
-
-      d3.selectAll("#digi")
-        .transition()
-        .style("bottom", "48px")
-
-      d3.selectAll("#data")
-        .transition()
-        .style("bottom", "34px")
-
-      d3.selectAll("#visual")
-        .transition()
-        .style("opacity", 1)
-        .style("bottom", "20px")
-
-      d3.select(".fix")
-        .transition(1000)
-        .attr("transform", "translate(" + vis.config.margin.left + "," + (vis.config.height - 80) + ")")
-
-      d3.selectAll('._1747:not(.lla)')
-        // .transition(1000)
-        .attr("opacity", 0.95)
-
-      // vis.fixed_vis
-      //   .append("line")
-      //   .attr("class", "vancisin_1747_visualization")
-      //   .attr("x1", function (d) { return vis.xScale(vis.config._1747) })
-      //   .attr("y1", 85)
-      //   .attr("x2", function (d) { return vis.xScale(vis.config._1877) })
-      //   .attr("y2", 85)
-      //   .attr("stroke", "white")
-      //   .attr("stroke-width", 10)
-      //   .attr("stroke-linecap", "round")
-      //   .attr("opacity", 0.7)
-      // vis.fixed_vis
-      //   .append("line")
-      //   .attr("class", "vancisin_1747_visualization")
-      //   .attr("x1", function (d) { return vis.xScale(vis.config._1877) })
-      //   .attr("y1", 85)
-      //   .attr("x2", function (d) { return vis.xScale(vis.config._1897) })
-      //   .attr("y2", 85)
-      //   .attr("stroke", "white")
-      //   .attr("stroke-width", 10)
-      //   .attr("stroke-linecap", "round")
-      //   .attr("opacity", 0.4)
-
-    }
-    else {
-      d3.select(".fix")
-        .transition(1000)
-        .attr("transform", "translate(" + vis.config.margin.left + "," + (vis.config.height - 65) + ")")
-
-      d3.selectAll('._1747:not(.lla)')
-        // .transition(1000)
-        .attr("opacity", 0.85);
-
-      d3.selectAll(".vancisin_1747_visualization").remove()
-    }
-
   }
 
   goToStep(stepIndex, direction) {

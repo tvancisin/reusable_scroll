@@ -41,6 +41,8 @@ let horizontal_svg = d3.select("#visualization")
   .attr("height", height)
   .append("g")
   .attr("transform", `translate(10,${margin.top})`);
+
+let line = horizontal_svg.append("g")
 //scaling horizontal axis
 let x_horizontal = d3.scaleTime()
   .range([0, width])
@@ -50,7 +52,7 @@ mapboxgl.accessToken = 'pk.eyJ1Ijoic2FzaGFnYXJpYmFsZHkiLCJhIjoiY2xyajRlczBlMDhqM
 const map = new mapboxgl.Map({
   container: 'map',
   style: 'mapbox://styles/sashagaribaldy/cls4l3gpq003k01r0fc2s04tv',
-  center: [60.137343, 40.137451],
+  center: [30.137343, 40.137451],
   zoom: 2,
   attributionControl: false
 });
@@ -72,7 +74,8 @@ map.on('load', () => {
     'layout': {},
     'paint': {
       'fill-color': ['match', ['get', 'ADMIN'],
-        "Russia", 'white',
+        "Russia", '#dd1e36',
+        "United Kingdom", '#dd1e36',
         '#7B8AD6',
       ],
       'fill-opacity': 1
@@ -199,11 +202,12 @@ Promise.all([
 
   let scrollerVis;
   const prepare_data = function (data, selected_actor, context, selected_country_string) {
+    console.log(context);
     //parse dates in context data
-    let context_parser = d3.timeParse("%Y/%m/%d");
-    context.forEach(function (d) {
-      d.year = context_parser(d.year)
-    })
+    // let context_parser = d3.timeParse("%Y/%m/%d");
+    // context.forEach(function (d) {
+    //   d.year = context_parser(d.year)
+    // })
 
     //group by dates and unique ID's
     let year_division = d3.groups(data, d => d.AgtId, d => d.date)
@@ -217,7 +221,8 @@ Promise.all([
     pprocess.sort(function (x, y) {
       return d3.ascending(x[1].length, y[1].length);
     })
-    console.log(pprocess);
+    let most_pp = pprocess[pprocess.length - 1] 
+    let most_pp_name = most_pp[0]
 
     function find_id(curr_id) {
       let country = files[2].find(function (x) {
@@ -235,6 +240,9 @@ Promise.all([
         the_array.push(country)
       };
     })
+    if (selected_country_string == "uk"){
+      the_array.push("United Kingdom")
+    }
 
     //overview data
     const most = d3.groups(data, d => d.date.getUTCFullYear(), d => d.AgtId),
@@ -295,6 +303,9 @@ Promise.all([
 
     d3.select(".six").html(actor + ` has participated as a peace agreement signatory
     in ` + num_agt + ` peace processes across ` + the_array.length + ` countries.`)
+
+    d3.select(".seven").html(`The peace process ` + actor + ` has participated in the most
+    has been ` + most_pp_name +`.`)
 
     scrollerVis = new ScrollerVis({ storyElement: '#story', mapElement: 'map' },
       data, year_division, the_array, context, selected_country_string, most_agt[0],
