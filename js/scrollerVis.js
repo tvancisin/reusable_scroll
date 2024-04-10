@@ -1,5 +1,7 @@
 let hovno = 0;
 let context_parser = d3.timeParse("%Y/%m/%d");
+let mousemove_function, mouseleave_function = null;
+let hoveredPolygonId = null;
 
 // re-drawing context lines/text
 const drawContext = function (context, height) {
@@ -16,10 +18,10 @@ const drawContext = function (context, height) {
         .attr("y1", function (d, i) {
           i += 1;
           if (i % 2 !== 0) {
-            return height * 0.2 - 30
+            return height * 0.2 - 20
           }
           else {
-            return height * 0.2
+            return height * 0.2 + 10
           }
         })
         .attr("y2", height)
@@ -53,7 +55,7 @@ const drawContext = function (context, height) {
         .attr("fill", "white")
         .attr("fill-opacity", 1)
         .attr("font-size", "16px")
-        .attr("x", function (d) { return x_horizontal(context_parser(d.year)) + 2 })
+        .attr("x", function (d) { return x_horizontal(context_parser(d.year)) - 10 })
         .attr("y", function (d, i) {
           i += 1;
           if (i % 2 !== 0) {
@@ -79,7 +81,6 @@ const drawContext = function (context, height) {
         .attr("opacity", 0)
         .remove()
     )
-
 }
 
 class ScrollerVis {
@@ -174,7 +175,9 @@ class ScrollerVis {
         .attr('cx', d => d.x)
         .attr('cy', d => d.y)
         .attr("class", function (d) {
-          return "my_circles " + d[1][0][1][0].agt_type + ` ` +
+          return "my_circles "
+            + d[1][0][1][0].agt_type + ` `
+            + d[1][0][1][0].where_agt.replace(/ .*/, '') + ` `
             + d[1][0][1][0].AgtId + " "
             + d[1][0][1][0].PPName.slice(0, 3) + " "
             + d[1][0][1][0].stage_label.replace(/[\s~`!@#$%^&*(){}\[\];:"'<,.>?\/\\|_+=-]/g, '')
@@ -300,13 +303,14 @@ class ScrollerVis {
       vis.x_axis = d3.axisLeft(y_vertical).ticks(5);
       horizontal_svg.selectAll(".myXaxis")
         .attr("transform", `translate(15,0)`)
-      horizontal_svg.selectAll(".myXaxis").transition()
+      horizontal_svg.selectAll(".myXaxis")
         .call(vis.x_axis)
         .selectAll("text")
-        .attr("transform", "translate(0,-4)")
+        .attr("transform", "translate(0,-4)rotate(-45)")
         .style("text-anchor", "middle")
-        .style("font-size", "10px")
+        .style("font-size", "12px")
         .style("font-family", "Montserrat");
+
     }
     else if (direction == "up") {
       d3.selectAll("." + this.stage).style("fill", "white")
@@ -315,14 +319,14 @@ class ScrollerVis {
       vis.x_axis = d3.axisBottom(x_horizontal).tickSize(-vis.height).ticks(10);
       horizontal_svg.selectAll(".myXaxis")
         .attr("transform", `translate(10, ` + vis.height + `)`)
-      horizontal_svg.selectAll(".myXaxis").transition()
+      horizontal_svg.selectAll(".myXaxis")
         .call(vis.x_axis)
         .style("stroke-dasharray", "5 5")
         .selectAll("text")
         .attr("transform", "translate(0,-4)")
         .style("fill", "white")
         .style("text-anchor", "middle")
-        .style("font-size", "12px")
+        .style("font-size", "14px")
         .style("font-family", "Montserrat");
 
       d3.selectAll(".graphic__vis, #visualization, #visualization1")
@@ -356,9 +360,61 @@ class ScrollerVis {
     }
   }
 
+
+
   step6(direction) {
     const vis = this;
     console.log("step6", direction);
+
+    // remove previous mousemove if there
+    if (mousemove_function != null) {
+      map.off('mousemove', 'state-fills', mousemove_function)
+    }
+    // attach mousemove listener
+    mousemove_function = (e) => {
+      let hovered_country = e.features[0].properties.ADMIN.replace(/ .*/, '')
+      map.getCanvas().style.cursor = 'pointer'
+      // when hovering over polygons 
+      if (e.features.length > 0) {
+        d3.selectAll(".my_circles").style("fill", "#7B8AD6").attr("r", 4)
+        d3.selectAll("." + hovered_country).style("fill", "white").attr("r", 7)
+        // when hovering over a particular polygon with an id
+        if (hoveredPolygonId !== null) {
+          map.setFeatureState(
+            { source: 'states', id: hoveredPolygonId },
+            { hover: false }
+          );
+        }
+
+        hoveredPolygonId = e.features[0].id;
+        map.setFeatureState(
+          { source: 'states', id: hoveredPolygonId },
+          { hover: true }
+        );
+      }
+    }
+
+    //remove previous mouseleave if there
+    if (mouseleave_function != null) {
+      map.off('mouseleave', 'state-fills', mouseleave_function)
+    }
+    // attach mouseleave listener
+    mouseleave_function = (e) => {
+      d3.select("#popup")
+        .style("display", "none")
+      d3.selectAll(".my_circles").style("fill", "#7B8AD6").attr("r", 4)
+      map.getCanvas().style.cursor = ''
+      if (hoveredPolygonId !== null) {
+        map.setFeatureState(
+          { source: 'states', id: hoveredPolygonId },
+          { hover: false }
+        );
+      }
+      hoveredPolygonId = null;
+    }
+
+    map.on('mousemove', 'state-fills', mousemove_function)
+    map.on('mouseleave', 'state-fills', mouseleave_function)
 
     if (direction == "down") {
       d3.select(".graphic__vis").style("background-color", "rgba(0, 0, 0, 0.5)")
@@ -368,6 +424,7 @@ class ScrollerVis {
           zoom: 2,
           essential: true // this animation is considered essential with respect to prefers-reduced-motion
         });
+
       }
       else if (this.selected_country == "uk") {
         map.flyTo({
@@ -377,17 +434,32 @@ class ScrollerVis {
         });
       }
     }
-    else {
+    else if (direction == "up") {
       d3.select(".graphic__vis").style("background-color", "rgba(0, 0, 0, 0)")
+      map.flyTo({
+        center: [30.137343, 40.137451],
+        zoom: 1,
+        essential: true // this animation is considered essential with respect to prefers-reduced-motion
+      });
     }
   }
 
   step7(direction) {
     const vis = this;
     console.log("step7", direction);
+
+    // remove previous mousemove if there
+    if (mousemove_function != null) {
+      map.off('mousemove', 'state-fills', mousemove_function)
+    }
+    //remove previous mouseleave if there
+    if (mouseleave_function != null) {
+      map.off('mouseleave', 'state-fills', mouseleave_function)
+    }
+
     if (direction == "down") {
       if (this.selected_country == "ru") {
-        d3.selectAll(".Abk").style("fill", "white")
+        d3.selectAll(".Abk").style("fill", "white").attr("r", 7)
         map.flyTo({
           center: [41.4422, 42.9738],
           zoom: 5.5,
@@ -395,7 +467,7 @@ class ScrollerVis {
         });
       }
       else {
-        d3.selectAll(".Nor").style("fill", "white")
+        d3.selectAll(".Nor").style("fill", "white").attr("r", 7)
         map.flyTo({
           center: [-6.4923, 54.7877],
           zoom: 5.5,
@@ -404,24 +476,160 @@ class ScrollerVis {
       }
     }
     else {
-      d3.selectAll(".my_circles").style("fill", "#7B8AD6")
-      map.flyTo({
-        center: [20.137343, 30.137451],
-        zoom: 2,
-        essential: true // this animation is considered essential with respect to prefers-reduced-motion
-      });
+      mousemove_function = (e) => {
+        let hovered_country = e.features[0].properties.ADMIN.replace(/ .*/, '')
+        map.getCanvas().style.cursor = 'pointer'
+        // when hovering over polygons 
+        if (e.features.length > 0) {
+          d3.selectAll(".my_circles").style("fill", "#7B8AD6").attr("r", 4)
+          d3.selectAll("." + hovered_country).style("fill", "white").attr("r", 7)
+          // when hovering over a particular polygon with an id
+          if (hoveredPolygonId !== null) {
+            map.setFeatureState(
+              { source: 'states', id: hoveredPolygonId },
+              { hover: false }
+            );
+          }
+          hoveredPolygonId = e.features[0].id;
+          map.setFeatureState(
+            { source: 'states', id: hoveredPolygonId },
+            { hover: true }
+          );
+        }
+      }
 
+      mouseleave_function = (e) => {
+        d3.select("#popup")
+          .style("display", "none")
+        d3.selectAll(".my_circles").style("fill", "#7B8AD6").attr("r", 4)
+        map.getCanvas().style.cursor = ''
+        if (hoveredPolygonId !== null) {
+          map.setFeatureState(
+            { source: 'states', id: hoveredPolygonId },
+            { hover: false }
+          );
+        }
+        hoveredPolygonId = null;
+      }
+
+      map.on('mousemove', 'state-fills', mousemove_function)
+      map.on('mouseleave', 'state-fills', mouseleave_function)
+
+      d3.selectAll(".my_circles").style("fill", "#7B8AD6").attr("r", 4)
+
+      if (this.selected_country == "ru") {
+        map.flyTo({
+          center: [60.137343, 60.137451],
+          zoom: 2,
+          essential: true // this animation is considered essential with respect to prefers-reduced-motion
+        });
+
+      }
+      else if (this.selected_country == "uk") {
+        map.flyTo({
+          center: [-6.4923, 54.7877],
+          zoom: 2,
+          essential: true // this animation is considered essential with respect to prefers-reduced-motion
+        });
+      }
     }
   }
 
   step8(direction) {
     const vis = this;
-    console.log("vancisin_1747_database");
+    console.log("step8", direction);
+
+    d3.selectAll(".my_circles").style("fill", "#7B8AD6").attr("r", 4)
+
+    if (direction == "down") {
+      if (this.selected_country == "ru") {
+        d3.selectAll(".Che").style("fill", "white").attr("r", 7)
+        map.flyTo({
+          center: [43.4023, 45.7187],
+          zoom: 5.5,
+          essential: true // this animation is considered essential with respect to prefers-reduced-motion
+        });
+      }
+      else {
+        d3.selectAll(".Bos").style("fill", "white").attr("r", 7)
+        map.flyTo({
+          center: [17.6791, 43.9159],
+          zoom: 5.5,
+          essential: true // this animation is considered essential with respect to prefers-reduced-motion
+        });
+      }
+    }
+
+    else if (direction == "up") {
+      d3.selectAll(".my_circles").style("fill", "#7B8AD6").attr("r", 4)
+      if (this.selected_country == "ru") {
+        d3.selectAll(".Abk").style("fill", "white").attr("r", 7)
+        map.flyTo({
+          center: [41.4422, 42.9738],
+          zoom: 5.5,
+          essential: true // this animation is considered essential with respect to prefers-reduced-motion
+        });
+      }
+      else {
+        d3.selectAll(".Nor").style("fill", "white").attr("r", 7)
+        map.flyTo({
+          center: [-6.4923, 54.7877],
+          zoom: 5.5,
+          essential: true // this animation is considered essential with respect to prefers-reduced-motion
+        });
+      }
+    }
   }
 
   step9(direction) {
     const vis = this;
-    console.log("vancisin_1747_visualization");
+    console.log("step9", direction);
+
+    if (direction == "down") {
+      d3.selectAll(".my_circles").style("fill", "#7B8AD6").attr("r", 4)
+      map.flyTo({
+        center: [30.137343, 40.137451],
+        zoom: 1,
+        essential: true // this animation is considered essential with respect to prefers-reduced-motion
+      });
+    }
+    else if (direction == "up") {
+      if (this.selected_country == "ru") {
+        d3.selectAll(".Che").style("fill", "white").attr("r", 7)
+        map.flyTo({
+          center: [43.4023, 45.7187],
+          zoom: 5.5,
+          essential: true // this animation is considered essential with respect to prefers-reduced-motion
+        });
+      }
+      else {
+        d3.selectAll(".Bos").style("fill", "white").attr("r", 7)
+        map.flyTo({
+          center: [17.6791, 43.9159],
+          zoom: 5.5,
+          essential: true // this animation is considered essential with respect to prefers-reduced-motion
+        });
+      }
+    }
+  }
+
+  step10(direction) {
+    const vis = this;
+    console.log("step10", direction);
+
+
+  }
+  step11(direction) {
+    const vis = this;
+    console.log("step11", direction);
+
+
+  }
+  step12(direction) {
+    const vis = this;
+    console.log("step12", direction);
+
+
   }
 
   goToStep(stepIndex, direction) {

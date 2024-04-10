@@ -1,3 +1,7 @@
+window.onbeforeunload = function () {
+  window.scrollTo(0, 0);
+}
+
 const width100 = window.innerWidth - 10,
   height100 = window.innerHeight,
   width80 = width100 * 0.80,
@@ -11,24 +15,21 @@ const margin = { top: 45, right: 10, bottom: 0, left: 10 },
 //adjusting width and height for current screen
 d3.selectAll("#story")
   .style("width", width100 + "px")
-d3.selectAll(".graphic__vis, .graphic__vis__1, #visualization, #visualization1")
+d3.selectAll(".graphic__vis, .graphic__vis__1, .graphic__vis__2, #visualization, #visualization1")
   .style("width", width80 + "px")
   .style("height", height100 + "px")
-d3.selectAll(".graphic__prose, .graphic__prose__1")
+d3.selectAll(".graphic__prose, .graphic__prose__1, .graphic__prose__2")
   .style("width", width20 + "px")
   .style("left", width80 + "px")
-d3.selectAll("#separator")
+d3.selectAll("#separator, #separator1, #separator2")
   .style("width", width100 + "px")
-  .style("height", height100 + "px")
-d3.selectAll("#separator1")
-  .style("width", width100 - 130 + "px")
   .style("height", height100 + "px")
 d3.selectAll("#map")
   .style("width", width100 + 50 + "px")
   .style("height", height100 + "px")
-d3.selectAll(".graphic__vis__1")
-  .style("width", width100 + "px")
-  .style("left", 0 + "px")
+// d3.selectAll(".graphic__vis__1")
+//   .style("width", width100 + "px")
+//   .style("left", 0 + "px")
 d3.selectAll(".trigger").style("padding-top", height100 / 2 + "px")
 
 //scaling vertical axis
@@ -53,7 +54,7 @@ const map = new mapboxgl.Map({
   container: 'map',
   style: 'mapbox://styles/sashagaribaldy/cls4l3gpq003k01r0fc2s04tv',
   center: [30.137343, 40.137451],
-  zoom: 2,
+  zoom: 1,
   attributionControl: false
 });
 
@@ -78,7 +79,12 @@ map.on('load', () => {
         "United Kingdom", '#dd1e36',
         '#7B8AD6',
       ],
-      'fill-opacity': 1
+      'fill-opacity': [
+        'case',
+        ['boolean', ['feature-state', 'hover'], false],
+        1,
+        0.7
+      ]
     }
   });
 
@@ -92,66 +98,6 @@ map.on('load', () => {
       'line-width': 0.5
     }
   });
-
-  // const secondsPerRevolution = 120;
-  // // Above zoom level 5, do not rotate.
-  // const maxSpinZoom = 5;
-  // // Rotate at intermediate speeds between zoom levels 3 and 5.
-  // const slowSpinZoom = 3;
-
-  // let userInteracting = false;
-  // let spinEnabled = true;
-
-  // function spinGlobe() {
-  //   const zoom = map.getZoom();
-  //   if (spinEnabled && !userInteracting && zoom < maxSpinZoom) {
-  //     let distancePerSecond = 360 / secondsPerRevolution;
-  //     if (zoom > slowSpinZoom) {
-  //       // Slow spinning at higher zooms
-  //       const zoomDif =
-  //         (maxSpinZoom - zoom) / (maxSpinZoom - slowSpinZoom);
-  //       distancePerSecond *= zoomDif;
-  //     }
-  //     const center = map.getCenter();
-  //     center.lng -= distancePerSecond;
-  //     // Smoothly animate the map over one second.
-  //     // When this animation is complete, it calls a 'moveend' event.
-  //     map.easeTo({ center, duration: 1000, easing: (n) => n });
-  //   }
-  // }
-
-  // // Pause spinning on interaction
-  // map.on('mousedown', () => {
-  //   userInteracting = true;
-  // });
-
-  // // Restart spinning the globe when interaction is complete
-  // map.on('mouseup', () => {
-  //   userInteracting = false;
-  //   spinGlobe();
-  // });
-
-  // // These events account for cases where the mouse has moved
-  // // off the map, so 'mouseup' will not be fired.
-  // map.on('dragend', () => {
-  //   userInteracting = false;
-  //   spinGlobe();
-  // });
-  // map.on('pitchend', () => {
-  //   userInteracting = false;
-  //   spinGlobe();
-  // });
-  // map.on('rotateend', () => {
-  //   userInteracting = false;
-  //   spinGlobe();
-  // });
-
-  // // When animation is complete, start spinning if there is no ongoing interaction
-  // map.on('moveend', () => {
-  //   spinGlobe();
-  // });
-
-  // spinGlobe();
 });
 
 //context dates
@@ -200,14 +146,10 @@ Promise.all([
     }
   })
 
+
+
   let scrollerVis;
   const prepare_data = function (data, selected_actor, context, selected_country_string) {
-    console.log(context);
-    //parse dates in context data
-    // let context_parser = d3.timeParse("%Y/%m/%d");
-    // context.forEach(function (d) {
-    //   d.year = context_parser(d.year)
-    // })
 
     //group by dates and unique ID's
     let year_division = d3.groups(data, d => d.AgtId, d => d.date)
@@ -221,8 +163,12 @@ Promise.all([
     pprocess.sort(function (x, y) {
       return d3.ascending(x[1].length, y[1].length);
     })
-    let most_pp = pprocess[pprocess.length - 1] 
+    let most_pp = pprocess[pprocess.length - 1]
     let most_pp_name = most_pp[0]
+    let sec_most_pp = pprocess[pprocess.length - 2]
+    let sec_most_pp_name = sec_most_pp[0]
+
+    console.log(pprocess);
 
     function find_id(curr_id) {
       let country = files[2].find(function (x) {
@@ -240,9 +186,11 @@ Promise.all([
         the_array.push(country)
       };
     })
-    if (selected_country_string == "uk"){
+    if (selected_country_string == "uk") {
       the_array.push("United Kingdom")
     }
+
+    let cntry = d3.groups(data, d => d.where_agt)
 
     //overview data
     const most = d3.groups(data, d => d.date.getUTCFullYear(), d => d.AgtId),
@@ -295,17 +243,21 @@ Promise.all([
     year when they signes the least amount of agreements was ` + least_agt[0] + `.
      They only signed one agreement.`)
 
-    d3.select(".three").html(actor + ` has mostly been involved in ` + agreement_types[agreement_types.length - 1][0] +
-      ` agreement types.`)
+    d3.select(".three").html(actor + ` has mostly been involved in `
+      + agreement_types[agreement_types.length - 1][0] + ` agreement types.`)
 
-    d3.select(".four").html(actor + ` has mostly been involved in ` + agreement_stages[agreement_stages.length - 1][0] +
-      ` agreement stages.`)
+    d3.select(".four").html(`When it comes to agreement stages, ` + actor +
+      ` has mostly been involved in ` + agreement_stages[agreement_stages.length - 1][0] +
+      ` stages.`)
 
     d3.select(".six").html(actor + ` has participated as a peace agreement signatory
     in ` + num_agt + ` peace processes across ` + the_array.length + ` countries.`)
 
     d3.select(".seven").html(`The peace process ` + actor + ` has participated in the most
-    has been ` + most_pp_name +`.`)
+    has been ` + most_pp_name + `.`)
+
+    d3.select(".eight").html(`After ` + most_pp_name + `, ` + actor + ` has been most involved
+     in ` + sec_most_pp_name + `.`)
 
     scrollerVis = new ScrollerVis({ storyElement: '#story', mapElement: 'map' },
       data, year_division, the_array, context, selected_country_string, most_agt[0],
@@ -313,6 +265,8 @@ Promise.all([
       agreement_stages[agreement_stages.length - 1][0]);
   }
 
+
+  // initial finction with Russian data
   prepare_data(ru, "Russia", ru_context_data, "ru")
 
   // let scrollerVis = new ScrollerVis({ storyElement: '#story', mapElement: 'map' }, data_for_scroll, year_division, the_array);
@@ -329,10 +283,13 @@ Promise.all([
   // select elements
   let graphicEl = document.querySelector('.graphic'),
     graphicEl1 = document.querySelector('.graphic1'),
+    graphicEl2 = document.querySelector('.graphic2'),
     graphicVisEl = graphicEl.querySelector('.graphic__vis'),
     graphicVisEl1 = graphicEl1.querySelector('.graphic__vis__1'),
+    graphicVisEl2 = graphicEl2.querySelector('.graphic__vis__2'),
     triggerEls = selectionToArray(graphicEl.querySelectorAll('.trigger')),
-    triggerEls1 = selectionToArray(graphicEl1.querySelectorAll('.trigger'));
+    triggerEls1 = selectionToArray(graphicEl1.querySelectorAll('.trigger')),
+    triggerEls2 = selectionToArray(graphicEl2.querySelectorAll('.trigger'));
 
   // handle the fixed/static position of grahpic
   let toggle = function (fixed, bottom) {
@@ -350,6 +307,15 @@ Promise.all([
 
     if (bottom) graphicVisEl1.classList.add('is-bottom')
     else graphicVisEl1.classList.remove('is-bottom')
+  }
+
+  // handle the fixed/static position of grahpic
+  let toggle2 = function (fixed, bottom) {
+    if (fixed) graphicVisEl2.classList.add('is-fixed')
+    else graphicVisEl2.classList.remove('is-fixed')
+
+    if (bottom) graphicVisEl2.classList.add('is-bottom')
+    else graphicVisEl2.classList.remove('is-bottom')
   }
 
   // setup a waypoint trigger for each trigger element
@@ -375,6 +341,28 @@ Promise.all([
 
   // setup a waypoint trigger for each trigger element
   let waypoints1 = triggerEls1.map(function (el) {
+    // get the step, cast as number					
+    let step = +el.getAttribute('data-step')
+
+    return new Waypoint({
+      element: el, // our trigger element
+      handler: function (direction) {
+        // if the direction is down then we use that number,
+        // else, we want to trigger the previous one
+        var nextStep = direction === 'down' ? step : Math.max(0, step)
+        scrollerVis.goToStep(nextStep, direction);
+        // console.log(nextStep);
+        // scrollerVis.goToStep(nextStep, direction);
+
+        // tell our graphic to update with a specific step
+        // graphic.update(nextStep)
+      },
+      offset: '30%',  // trigger halfway up the viewport
+    })
+  })
+  
+  // setup a waypoint trigger for each trigger element
+  let waypoints2 = triggerEls2.map(function (el) {
     // get the step, cast as number					
     let step = +el.getAttribute('data-step')
 
@@ -435,6 +423,26 @@ Promise.all([
     offset: 'bottom-in-view',
   })
 
+  // enter (top) / exit (bottom) graphic (toggle fixed position)
+  const enterWaypoint2 = new Waypoint({
+    element: graphicEl2,
+    handler: function (direction) {
+      let fixed = direction === 'down'
+      let bottom = false
+      toggle2(fixed, bottom)
+    },
+  })
+
+  const exitWaypoint2 = new Waypoint({
+    element: graphicEl2,
+    handler: function (direction) {
+      let fixed = direction === 'up'
+      let bottom = !fixed
+      toggle2(fixed, bottom)
+    },
+    offset: 'bottom-in-view',
+  })
+  
   // const waypoints =
   //   d3.selectAll('.step')
   //     .each(function (d, stepIndex) {
