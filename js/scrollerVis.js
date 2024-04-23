@@ -302,11 +302,11 @@ class ScrollerVis {
         .attr("visibility", "hidden")
       vis.x_axis = d3.axisLeft(y_vertical).ticks(5);
       horizontal_svg.selectAll(".myXaxis")
-        .attr("transform", `translate(15,0)`)
+        .attr("transform", `translate(20,0)`)
       horizontal_svg.selectAll(".myXaxis")
         .call(vis.x_axis)
         .selectAll("text")
-        .attr("transform", "translate(0,-4)rotate(-45)")
+        .attr("transform", "translate(0,-4)rotate(45)")
         .style("text-anchor", "middle")
         .style("font-size", "12px")
         .style("font-family", "Montserrat");
@@ -438,7 +438,7 @@ class ScrollerVis {
       d3.select(".graphic__vis").style("background-color", "rgba(0, 0, 0, 0)")
       map.flyTo({
         center: [30.137343, 40.137451],
-        zoom: 1,
+        zoom: 1.5,
         essential: true // this animation is considered essential with respect to prefers-reduced-motion
       });
     }
@@ -589,7 +589,7 @@ class ScrollerVis {
       d3.selectAll(".my_circles").style("fill", "#7B8AD6").attr("r", 4)
       map.flyTo({
         center: [30.137343, 40.137451],
-        zoom: 1,
+        zoom: 1.5,
         essential: true // this animation is considered essential with respect to prefers-reduced-motion
       });
     }
